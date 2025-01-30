@@ -9,7 +9,13 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import org.slf4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Optional;
+import org.yaml.snakeyaml.Yaml;
 
 @Plugin(
 	id = "vlobbyconnect",
@@ -30,19 +36,27 @@ public final class VelocityPlugin {
 	@Subscribe
 	void onProxyInitialization(final ProxyInitializeEvent event) {
 		// Initialize lobbies
-		Optional<RegisteredServer> lobby1Opt = event.getServer().getServer("lobby1");
-		Optional<RegisteredServer> lobby2Opt = event.getServer().getServer("lobby2");
-		Optional<RegisteredServer> lobby3Opt = event.getServer().getServer("lobby3");
-		Optional<RegisteredServer> lobby4Opt = event.getServer().getServer("lobby4");
+		Yaml yaml = new Yaml();
+		try {
+			Map<String, Object> config = yaml.load(Files.newInputStream(Paths.get("src/main/resources/config.yml")));
+			Map<String, String> lobbies = (Map<String, String>) config.get("lobbies");
 
-		if (lobby1Opt.isPresent() && lobby2Opt.isPresent() && lobby3Opt.isPresent() && lobby4Opt.isPresent()) {
-			lobby1 = lobby1Opt.get();
-			lobby2 = lobby2Opt.get();
-			lobby3 = lobby3Opt.get();
-			lobby4 = lobby4Opt.get();
-			logger.info("vLobbyConnect initialized successfully.");
-		} else {
-			logger.error("Failed to initialize lobbies. Make sure all lobbies are registered.");
+			Optional<RegisteredServer> lobby1Opt = event.getServer().getServer(lobbies.get("lobby1"));
+			Optional<RegisteredServer> lobby2Opt = event.getServer().getServer(lobbies.get("lobby2"));
+			Optional<RegisteredServer> lobby3Opt = event.getServer().getServer(lobbies.get("lobby3"));
+			Optional<RegisteredServer> lobby4Opt = event.getServer().getServer(lobbies.get("lobby4"));
+
+			if (lobby1Opt.isPresent() && lobby2Opt.isPresent() && lobby3Opt.isPresent() && lobby4Opt.isPresent()) {
+				lobby1 = lobby1Opt.get();
+				lobby2 = lobby2Opt.get();
+				lobby3 = lobby3Opt.get();
+				lobby4 = lobby4Opt.get();
+				logger.info("vLobbyConnect initialized successfully.");
+			} else {
+				logger.error("Failed to initialize lobbies. Make sure all lobbies are registered.");
+			}
+		} catch (IOException e) {
+			logger.error("Failed to load config.yml", e);
 		}
 	}
 
