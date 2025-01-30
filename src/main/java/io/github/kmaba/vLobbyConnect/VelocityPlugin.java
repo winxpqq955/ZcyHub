@@ -28,23 +28,25 @@ public final class VelocityPlugin {
 	@Inject
 	private Logger logger;
 
+	@Inject
+	private com.velocitypowered.api.proxy.ProxyServer server;
+
 	private RegisteredServer lobby1;
 	private RegisteredServer lobby2;
 	private RegisteredServer lobby3;
 	private RegisteredServer lobby4;
 
 	@Subscribe
-	void onProxyInitialization(final ProxyInitializeEvent event) {
-		// Initialize lobbies
+	public void onProxyInitialize(ProxyInitializeEvent event) {
 		Yaml yaml = new Yaml();
 		try {
 			Map<String, Object> config = yaml.load(Files.newInputStream(Paths.get("src/main/resources/config.yml")));
 			Map<String, String> lobbies = (Map<String, String>) config.get("lobbies");
 
-			Optional<RegisteredServer> lobby1Opt = event.getServer().getServer(lobbies.get("lobby1"));
-			Optional<RegisteredServer> lobby2Opt = event.getServer().getServer(lobbies.get("lobby2"));
-			Optional<RegisteredServer> lobby3Opt = event.getServer().getServer(lobbies.get("lobby3"));
-			Optional<RegisteredServer> lobby4Opt = event.getServer().getServer(lobbies.get("lobby4"));
+			Optional<RegisteredServer> lobby1Opt = server.getServer(lobbies.get("lobby1"));
+			Optional<RegisteredServer> lobby2Opt = server.getServer(lobbies.get("lobby2"));
+			Optional<RegisteredServer> lobby3Opt = server.getServer(lobbies.get("lobby3"));
+			Optional<RegisteredServer> lobby4Opt = server.getServer(lobbies.get("lobby4"));
 
 			if (lobby1Opt.isPresent() && lobby2Opt.isPresent() && lobby3Opt.isPresent() && lobby4Opt.isPresent()) {
 				lobby1 = lobby1Opt.get();
@@ -68,24 +70,24 @@ public final class VelocityPlugin {
 		logger.info("Player {} joined with protocol version {}", player.getUsername(), protocolVersion);
 
 		if (protocolVersion >= 760) { // 1.20+
-			if (lobby1.getPlayersConnected().size() < lobby1.getServerInfo().getMaxPlayers()) {
+			int sizeLobby1 = lobby1.getPlayersConnected().size();
+			int sizeLobby2 = lobby2.getPlayersConnected().size();
+			if (sizeLobby1 % 2 == 0) {
 				event.setInitialServer(lobby1);
 				logger.info("Redirecting player {} to lobby1", player.getUsername());
-			} else if (lobby2.getPlayersConnected().size() < lobby2.getServerInfo().getMaxPlayers()) {
+			} else {
 				event.setInitialServer(lobby2);
 				logger.info("Redirecting player {} to lobby2", player.getUsername());
-			} else {
-				logger.warn("All 1.20+ lobbies are full. Player {} could not be redirected.", player.getUsername());
 			}
 		} else if (protocolVersion == 47) { // 1.8
-			if (lobby3.getPlayersConnected().size() < lobby3.getServerInfo().getMaxPlayers()) {
+			int sizeLobby3 = lobby3.getPlayersConnected().size();
+			int sizeLobby4 = lobby4.getPlayersConnected().size();
+			if (sizeLobby3 % 2 == 0) {
 				event.setInitialServer(lobby3);
 				logger.info("Redirecting player {} to lobby3", player.getUsername());
-			} else if (lobby4.getPlayersConnected().size() < lobby4.getServerInfo().getMaxPlayers()) {
+			} else {
 				event.setInitialServer(lobby4);
 				logger.info("Redirecting player {} to lobby4", player.getUsername());
-			} else {
-				logger.warn("All 1.8 lobbies are full. Player {} could not be redirected.", player.getUsername());
 			}
 		} else {
 			logger.warn("Unsupported protocol version {} for player {}", protocolVersion, player.getUsername());
