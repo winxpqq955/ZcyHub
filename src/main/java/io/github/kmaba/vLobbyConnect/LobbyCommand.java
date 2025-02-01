@@ -52,7 +52,6 @@ public class LobbyCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         logger.info("LobbyCommand execution started.");
         CommandSource source = invocation.source();
-        String[] args = invocation.arguments();
 
         if (!(source instanceof Player)) {
             source.sendMessage(Component.text("This command can only be used by players."));
@@ -61,31 +60,44 @@ public class LobbyCommand implements SimpleCommand {
         }
 
         Player player = (Player) source;
-        // Use player.getProtocolVersion() directly instead of casting to ConnectedPlayer
         int protocol = player.getProtocolVersion().getProtocol();
-        String defaultLobbyKey = (protocol <= 47) ? "1.8lobby1" : "1.20lobby1";
-        String typedKey = (args.length > 0) ? args[0] : defaultLobbyKey;
+        RegisteredServer targetServer = null;
 
-        String actualLobbyName = (lobbies != null) ? lobbies.get(typedKey) : null;
-        if (actualLobbyName == null) {
-            player.sendMessage(Component.text("No valid lobby config found for key: " + typedKey));
-            logger.error("No lobby configuration found for key: {}", typedKey);
-            return;
+        if (protocol <= 47) {
+            String lobby1Name = lobbies.get("1.8lobby1");
+            String lobby2Name = lobbies.get("1.8lobby2");
+            Optional<RegisteredServer> lobby1Opt = server.getServer(lobby1Name);
+            Optional<RegisteredServer> lobby2Opt = server.getServer(lobby2Name);
+            if (lobby1Opt.isPresent() && lobby1Opt.get().getPlayersConnected().size() < 500) {
+                targetServer = lobby1Opt.get();
+            } else if (lobby2Opt.isPresent() && lobby2Opt.get().getPlayersConnected().size() < 500) {
+                targetServer = lobby2Opt.get();
+            } else {
+                player.sendMessage(Component.text("All 1.8 lobbies are full, please try again later."));
+                return;
+            }
+        } else {
+            String lobby1Name = lobbies.get("1.20lobby1");
+            String lobby2Name = lobbies.get("1.20lobby2");
+            Optional<RegisteredServer> lobby1Opt = server.getServer(lobby1Name);
+            Optional<RegisteredServer> lobby2Opt = server.getServer(lobby2Name);
+            if (lobby1Opt.isPresent() && lobby1Opt.get().getPlayersConnected().size() < 500) {
+                targetServer = lobby1Opt.get();
+            } else if (lobby2Opt.isPresent() && lobby2Opt.get().getPlayersConnected().size() < 500) {
+                targetServer = lobby2Opt.get();
+            } else {
+                player.sendMessage(Component.text("All 1.20+ lobbies are full, please try again later."));
+                return;
+            }
         }
 
-        Optional<RegisteredServer> targetServer = server.getServer(actualLobbyName);
-        if (!targetServer.isPresent()) {
-            player.sendMessage(Component.text("Invalid lobby name: " + typedKey));
-            logger.error("Invalid lobby name: {}. Check your velocity.toml configuration.", typedKey);
-            return;
-        }
-
-        if (player.getCurrentServer().isPresent() && player.getCurrentServer().get().getServerInfo().getName().equals(actualLobbyName)) {
+        if (player.getCurrentServer().isPresent() && 
+            player.getCurrentServer().get().getServerInfo().getName().equals(targetServer.getServerInfo().getName())) {
             player.sendMessage(Component.text("&cYou are already in a lobby."));
             return;
         }
 
-        logger.info("Player {} connecting to lobby '{}'", player.getUsername(), typedKey);
-        player.createConnectionRequest(targetServer.get()).fireAndForget();
+        logger.info("Player {} connecting to lobby '{}'", player.getUsername(), targetServer.getServerInfo().getName());
+        player.createConnectionRequest(targetServer).fireAndForget();
     }
 }
