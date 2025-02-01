@@ -25,3 +25,31 @@ lobbies:
 ```
 
 These names must match the server entries defined in your velocity.toml.
+
+### **Commands:**
+The plugin provides the following commands for players to switch between lobbies:
+
+- `/hub [lobbyName]`: Switch to the specified lobby or default to `lobby1` if no lobby name is provided.
+- `/lobby [lobbyName]`: Switch to the specified lobby or default to `lobby1` if no lobby name is provided.
+
+### **Usage:**
+To use the commands, simply type them in the chat while connected to the server. For example:
+
+- `/hub`: Connects you to the default lobby (`lobby1`).
+- `/hub lobby2`: Connects you to `lobby2`.
+- `/lobby`: Connects you to the default lobby (`lobby1`).
+- `/lobby lobby3`: Connects you to `lobby3`.
+
+### **Error Handling:**
+The plugin handles invalid lobby names and lobby switching errors gracefully by:
+
+- Logging an error message indicating the issue.
+- Notifying the player about the error.
+- Providing a fallback mechanism to redirect the player to a default lobby or disconnect them gracefully.
+
+### **Player Disconnections:**
+The plugin handles player disconnections by:
+
+- Logging an informational message indicating the player disconnection.
+- Notifying the player that they have been disconnected.
+- Ensuring that any resources or data associated with the player are cleaned up properly to avoid memory leaks or other issues.
