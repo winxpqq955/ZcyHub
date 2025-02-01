@@ -1,5 +1,5 @@
 lobbies:
-  lobby1: "127.0.0.1:25565"
-  lobby2: "127.0.0.1:25566"
-  lobby3: "127.0.0.1:25567"
-  lobby4: "127.0.0.1:25568"
+  1.20lobby1: "lobby1"
+  1.20lobby2: "lobby2"
+  1.8lobby1: "lobby3"
+  1.8lobby2: "lobby4"

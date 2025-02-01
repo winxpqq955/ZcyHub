@@ -1,1 +1,0 @@
-{"id":"vlobbyconnect","name":"vLobbyConnect","version":"1.0.0-SNAPSHOT","description":"A Velocity Plugin for Lobby Connection","authors":["kmaba"],"dependencies":[],"main":"io.github.kmaba.vLobbyConnect.VelocityPlugin"}
