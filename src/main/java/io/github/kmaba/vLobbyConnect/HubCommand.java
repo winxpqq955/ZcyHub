@@ -80,8 +80,12 @@ public class HubCommand implements SimpleCommand {
             return;
         }
 
+        if (player.getCurrentServer().isPresent() && player.getCurrentServer().get().getServerInfo().getName().equals(actualLobbyName)) {
+            player.sendMessage(Component.text("&cYou are already in a lobby."));
+            return;
+        }
+
         logger.info("Player {} connecting to lobby '{}'", player.getUsername(), typedKey);
         player.createConnectionRequest(targetServer.get()).fireAndForget();
-        player.sendMessage(Component.text("Connecting to " + typedKey + "..."));
     }
 }
