@@ -1,55 +1,42 @@
-**Description:**  
-vLobbyConnect is a Velocity plugin that automatically directs players to the correct lobby based on their Minecraft version upon joining the server. This ensures seamless matchmaking and prevents version incompatibility issues.  
+# vLobbyConnect
 
-### **Features:**  
-✅ **Automatic Version Detection** – Identifies the player’s Minecraft version on join.  
-✅ **Smart Lobby Assignment** – Sends players to an available lobby that matches their version.  
-✅ **Multiple Lobby Support** – Supports both 1.20+ and 1.8 versions with predefined lobbies.  
-✅ **Fallback Handling** – If a lobby is full, the player is sent to another available option.  
-✅ **Efficient & Lightweight** – Optimized for performance with minimal impact on server resources.  
-✅ **Logging & Debugging** – Provides logs for join events and redirections.  
+vLobbyConnect is a Velocity plugin that manages lobby connections for different Minecraft protocol versions.  
+**Note:** Both Velocity and the backend servers must have `online-mode=false`.
 
-### **Lobby Mapping:**  
-- **1.20+ Players →** `lobby1` or `lobby2`  
-- **1.8 Players →** `lobby3` or `lobby4`  
+## Setup
 
-### **Configuration:**
-To configure the lobby names, edit the `config.yml` file:
+1. Place the plugin jar in your Velocity plugins folder.
+2. Ensure your backend servers have `online-mode=false`.
+3. Configure your lobbies in two places:
+
+### Plugin Config (config.yml)
+This file is located in `src/main/resources/config.yml` (it will be copied to `plugins/vLobbyConnect/config.yml` on first run):
 
 ```yaml
 lobbies:
-  1.20lobby1: "lobby1"
-  1.20lobby2: "lobby2"
-  1.8lobby1: "lobby3"
-  1.8lobby2: "lobby4"
+  1.20lobby1: "name1"
+  1.20lobby2: "name2"
+  1.8lobby1: "name3"
+  1.8lobby2: "name4"
 ```
 
-These names must match the server entries defined in your velocity.toml.
+### Velocity Server Configuration (velocity.toml)
+In your `velocity.toml`, configure the servers with the required modifications. For example:
 
-### **Commands:**
-The plugin provides the following commands for players to switch between lobbies:
+```toml
+[servers]
+name1 = "ip"
+name2 = "ip"
+name3 = "ip"
+name4 = "ip"
+try = []             # Fallback is empty
+```
 
-- `/hub [lobbyName]`: Switch to the specified lobby or default to `lobby1` if no lobby name is provided.
-- `/lobby [lobbyName]`: Switch to the specified lobby or default to `lobby1` if no lobby name is provided.
+## Commands
 
-### **Usage:**
-To use the commands, simply type them in the chat while connected to the server. For example:
+- **/lobby**: Connects the player to the correct lobby based on their protocol version.
+- **/hub**: Transfers the player back to the designated hub/lobby.
 
-- `/hub`: Connects you to the default lobby (`lobby1`).
-- `/hub lobby2`: Connects you to `lobby2`.
-- `/lobby`: Connects you to the default lobby (`lobby1`).
-- `/lobby lobby3`: Connects you to `lobby3`.
+Logs will provide further details if lobbies are full or misconfigured.
 
-### **Error Handling:**
-The plugin handles invalid lobby names and lobby switching errors gracefully by:
-
-- Logging an error message indicating the issue.
-- Notifying the player about the error.
-- Providing a fallback mechanism to redirect the player to a default lobby or disconnect them gracefully.
-
-### **Player Disconnections:**
-The plugin handles player disconnections by:
-
-- Logging an informational message indicating the player disconnection.
-- Notifying the player that they have been disconnected.
-- Ensuring that any resources or data associated with the player are cleaned up properly to avoid memory leaks or other issues.
+Enjoy using vLobbyConnect!
