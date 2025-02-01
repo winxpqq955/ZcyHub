@@ -123,6 +123,41 @@ public void onProxyInitialize(ProxyInitializeEvent event) {
     }
 
     @Subscribe
+    public void onServerKick(com.velocitypowered.api.event.player.KickedFromServerEvent event) {
+        Player player = event.getPlayer();
+        RegisteredServer kickedServer = event.getServer();
+        String serverName = kickedServer.getServerInfo().getName();
+        
+        // If the kicked server is already a lobby, do nothing.
+        if ((lobby1 != null && serverName.equals(lobby1.getServerInfo().getName())) ||
+            (lobby2 != null && serverName.equals(lobby2.getServerInfo().getName())) ||
+            (lobby3 != null && serverName.equals(lobby3.getServerInfo().getName())) ||
+            (lobby4 != null && serverName.equals(lobby4.getServerInfo().getName()))) {
+            return;
+        }
+        
+        RegisteredServer fallback = null;
+        int protocolVersion = player.getProtocolVersion().getProtocol();
+        if (protocolVersion <= 47) {
+            if (lobby3 != null && lobby3.getPlayersConnected().size() < 500) {
+                fallback = lobby3;
+            } else if (lobby4 != null && lobby4.getPlayersConnected().size() < 500) {
+                fallback = lobby4;
+            }
+        } else {
+            if (lobby1 != null && lobby1.getPlayersConnected().size() < 500) {
+                fallback = lobby1;
+            } else if (lobby2 != null && lobby2.getPlayersConnected().size() < 500) {
+                fallback = lobby2;
+            }
+        }
+        
+        if (fallback != null) {
+            event.setResult(com.velocitypowered.api.event.player.KickedFromServerEvent.RedirectPlayer.create(fallback));
+        }
+    }
+
+    @Subscribe
     public void onPlayerDisconnect(Player player) {
         UUID uuid = player.getUniqueId();
         connectionAttempts.remove(uuid);

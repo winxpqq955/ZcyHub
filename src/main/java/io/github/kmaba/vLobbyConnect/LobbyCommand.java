@@ -6,6 +6,7 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.slf4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
@@ -93,7 +94,7 @@ public class LobbyCommand implements SimpleCommand {
 
         if (player.getCurrentServer().isPresent() && 
             player.getCurrentServer().get().getServerInfo().getName().equals(targetServer.getServerInfo().getName())) {
-            player.sendMessage(Component.text("&cYou are already in a lobby."));
+            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&cYou are already in a lobby."));
             return;
         }
 
