@@ -83,6 +83,10 @@ public void onProxyInitialize(ProxyInitializeEvent event) {
     } catch (IOException e) {
         logger.error("Failed to load config.yml", e);
     }
+
+    // Register commands
+    server.getCommandManager().register("hub", new HubCommand(server, logger));
+    server.getCommandManager().register("lobby", new LobbyCommand(server, logger));
 }
 
 	@Subscribe(order = PostOrder.FIRST)
@@ -116,5 +120,12 @@ public void onProxyInitialize(ProxyInitializeEvent event) {
                 player.disconnect(Component.text("All lobbies are full."));
             }
         }
+    }
+
+    @Subscribe
+    public void onPlayerDisconnect(Player player) {
+        UUID uuid = player.getUniqueId();
+        connectionAttempts.remove(uuid);
+        logger.info("Player {} disconnected.", player.getUsername());
     }
 }

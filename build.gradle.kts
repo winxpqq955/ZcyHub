@@ -7,6 +7,7 @@ plugins {
 
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
+    mavenCentral()
 }
 
 dependencies {
@@ -38,4 +39,9 @@ sourceSets {
     }
 }
 
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+        vendor.set(JvmVendorSpec.ADOPTIUM)
+    }
+}
