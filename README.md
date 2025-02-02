@@ -1,6 +1,13 @@
-# vLobbyConnect
+# vLobbyConnect – The Ultimate Lobby Manager for Velocity Proxy  
 
-vLobbyConnect is a Velocity plugin that manages lobby connections for different Minecraft protocol versions.  
+vLobbyConnect is a **powerful and lightweight Velocity plugin** designed to seamlessly manage lobby connections for **players using different Minecraft protocol versions**. Whether your server supports multiple Minecraft versions or needs efficient load balancing, vLobbyConnect ensures players are sent to the **correct lobby** every time.  
+
+## 🚀 Why Use vLobbyConnect?  
+- **Version-Specific Lobby Assignment** – Automatically sends players to the appropriate lobby based on their Minecraft version.  
+- **Seamless Load Balancing** – Distributes players evenly across multiple lobbies, preventing overcrowding and lag.  
+- **Failsafe Mechanisms** – If a lobby is misconfigured or full, players are redirected to an available fallback lobby.  
+- **Easy Setup & Configuration** – Just drop the plugin into Velocity, configure the lobbies, and you're good to go!  
+
 **Note:** Both Velocity and the backend servers must have `online-mode=false`.
 
 ## Setup
@@ -32,20 +39,18 @@ name1 = "ip"
 name2 = "ip"
 name3 = "ip"
 name4 = "ip"
-try = []             # Fallback is empty
+try = []             # keep fallback empty
 ```
 
-## Commands
+## ⚡ Commands  
+- **/lobby**  
+- **/hub**  
 
-- **/lobby**: Connects the player to the correct lobby based on their protocol version.
-- **/hub**: Transfers the player back to the designated hub/lobby.
+These 2 Instantly teleports the player to the appropriate lobby.
 
-## Load Balancing Strategies
+## 🛡️ Future Enhancements (Planned Features)  
+- **Customizable Messages** – Modify join/fallback messages in `config.yml`.  
+- **Priority Lobbies** – Assign preferred lobbies based on player rank or permissions.  
 
-The plugin uses the following load balancing strategies to ensure fair distribution of players across available lobbies while considering the current load on each lobby:
-
-- **Fallback Mechanism:** If the configured lobbies are not available or misconfigured, the plugin implements a fallback mechanism to handle such cases. This can involve redirecting players to a default lobby or displaying a message indicating that the lobbies are currently unavailable.
-
-Logs will provide further details if lobbies are full or misconfigured.
-
-Enjoy using vLobbyConnect!
+## 🎮 Conclusion  
+vLobbyConnect is the **ultimate lobby management solution** for Velocity servers, ensuring a smooth, version-compatible experience for all players. Download it today and **enhance your network’s performance and player experience!** 🚀
