@@ -32,6 +32,7 @@ import java.util.Comparator;
 @Plugin(
 	id = "vlobbyconnect",
 	name = "vLobbyConnect",
+	url = "https://kmaba.link/",
 	description = "A Velocity Plugin for Lobby Connection",
 	version = Constants.VERSION,
 	authors = { "kmaba" }
@@ -43,11 +44,17 @@ public final class VelocityPlugin {
 	@Inject
 	private com.velocitypowered.api.proxy.ProxyServer server;
 
+	@Inject
+	private Metrics.Factory metricsFactory;
+
 	private final Map<String, List<RegisteredServer>> versionLobbies = new HashMap<>();
 	private final Map<UUID, Integer> connectionAttempts = new ConcurrentHashMap<>();
 
 	@Subscribe
 	public void onProxyInitialize(ProxyInitializeEvent event) {
+		int pluginId = 24615;
+		Metrics metrics = metricsFactory.make(this, pluginId);
+
 		try {
 			// Load the config.yml file
 			Yaml yaml = new Yaml();
