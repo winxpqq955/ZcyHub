@@ -8,8 +8,6 @@ vLobbyConnect is a **powerful and lightweight Velocity plugin** designed to seam
 - **Failsafe Mechanisms** – If a lobby is misconfigured or full, players are redirected to an available fallback lobby.  
 - **Easy Setup & Configuration** – Just drop the plugin into Velocity, configure the lobbies, and you're good to go!  
 
-**Note:** Both Velocity and the backend servers must have `online-mode=false`.
-
 ## Setup
 
 1. Place the plugin jar in your Velocity plugins folder.
