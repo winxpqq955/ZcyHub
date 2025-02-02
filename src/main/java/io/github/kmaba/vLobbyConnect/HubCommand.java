@@ -13,40 +13,54 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HubCommand implements SimpleCommand {
 
     private final ProxyServer server;
     private final Logger logger;
-    private final Map<String, String> lobbies;
+    private final Map<String, List<RegisteredServer>> versionLobbies = new HashMap<>();
 
     @SuppressWarnings("unchecked")
     public HubCommand(ProxyServer server, Logger logger) {
         this.server = server;
         this.logger = logger;
-        Map<String, String> loadedLobbies = null;
         try {
-            logger.info("Loading lobby configuration for HubCommand...");
             Yaml yaml = new Yaml();
             File configFile = new File("plugins/vLobbyConnect/config.yml");
             if (!configFile.exists()) {
                 configFile.getParentFile().mkdirs();
                 Files.copy(getClass().getResourceAsStream("/config.yml"), configFile.toPath());
-                logger.info("Config file created from resource.");
+                // Removed config logging
             }
             Map<String, Object> config = yaml.load(Files.newInputStream(configFile.toPath()));
-            loadedLobbies = (Map<String, String>) config.get("lobbies");
-            if (loadedLobbies == null) {
+            Map<String, String> lobbies = (Map<String, String>) config.get("lobbies");
+            if (lobbies == null) {
                 logger.error("Failed to load valid lobby settings from config file.");
             } else {
-                logger.info("Lobby configuration loaded successfully.");
+                Pattern pattern = Pattern.compile("^(\\d+\\.\\d+)lobby(\\d+)$");
+                for (Map.Entry<String, String> entry : lobbies.entrySet()) {
+                    Matcher matcher = pattern.matcher(entry.getKey());
+                    if (matcher.matches()) {
+                        String version = matcher.group(1);
+                        String lobbyName = entry.getValue();
+                        Optional<RegisteredServer> serverOpt = server.getServer(lobbyName);
+                        if (serverOpt.isPresent()) {
+                            versionLobbies.computeIfAbsent(version, k -> new ArrayList<>()).add(serverOpt.get());
+                            // Removed config logging
+                        } else {
+                            // Removed config logging for missing lobby server
+                        }
+                    } else {
+                        logger.warn("Invalid lobby configuration key: {}", entry.getKey());
+                    }
+                }
             }
         } catch (IOException e) {
             logger.error("Error loading config.yml", e);
         }
-        this.lobbies = loadedLobbies;
     }
 
     @Override
@@ -61,44 +75,66 @@ public class HubCommand implements SimpleCommand {
         }
 
         Player player = (Player) source;
-        int protocol = player.getProtocolVersion().getProtocol();
-        RegisteredServer targetServer = null;
-
-        if (protocol <= 47) {
-            String lobby1Name = lobbies.get("1.8lobby1");
-            String lobby2Name = lobbies.get("1.8lobby2");
-            Optional<RegisteredServer> lobby1Opt = server.getServer(lobby1Name);
-            Optional<RegisteredServer> lobby2Opt = server.getServer(lobby2Name);
-            if (lobby1Opt.isPresent() && lobby1Opt.get().getPlayersConnected().size() < 500) {
-                targetServer = lobby1Opt.get();
-            } else if (lobby2Opt.isPresent() && lobby2Opt.get().getPlayersConnected().size() < 500) {
-                targetServer = lobby2Opt.get();
-            } else {
-                player.sendMessage(Component.text("All 1.8 lobbies are full, please try again later."));
-                return;
-            }
-        } else {
-            String lobby1Name = lobbies.get("1.20lobby1");
-            String lobby2Name = lobbies.get("1.20lobby2");
-            Optional<RegisteredServer> lobby1Opt = server.getServer(lobby1Name);
-            Optional<RegisteredServer> lobby2Opt = server.getServer(lobby2Name);
-            if (lobby1Opt.isPresent() && lobby1Opt.get().getPlayersConnected().size() < 500) {
-                targetServer = lobby1Opt.get();
-            } else if (lobby2Opt.isPresent() && lobby2Opt.get().getPlayersConnected().size() < 500) {
-                targetServer = lobby2Opt.get();
-            } else {
-                player.sendMessage(Component.text("All 1.20+ lobbies are full, please try again later."));
-                return;
-            }
+        String version = player.getProtocolVersion().getName();
+        List<RegisteredServer> lobbies = versionLobbies.get(version);
+        if (lobbies == null || lobbies.isEmpty()) {
+            lobbies = getFallbackLobbies(version);
         }
 
+        if (lobbies == null || lobbies.isEmpty()) {
+            player.sendMessage(Component.text("No lobbies available for your Minecraft version."));
+            logger.warn("No lobbies available for version {}", version);
+            return;
+        }
+
+        RegisteredServer targetServer = getLeastLoadedLobby(lobbies);
+
+        if (targetServer == null) {
+            player.sendMessage(Component.text("All lobbies are full, please try again later."));
+            logger.warn("All lobbies are full for version {}", version);
+            return;
+        }
+
+        // Instead of checking if current server equals target only, check if player's current server is any hub.
         if (player.getCurrentServer().isPresent() &&
-            player.getCurrentServer().get().getServerInfo().getName().equals(targetServer.getServerInfo().getName())) {
+            lobbies.stream().anyMatch(s -> s.getServerInfo().getName().equals(
+                player.getCurrentServer().get().getServerInfo().getName()
+            ))) {
             player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&cYou are already in a lobby."));
             return;
         }
 
         logger.info("Player {} connecting to lobby '{}'", player.getUsername(), targetServer.getServerInfo().getName());
         player.createConnectionRequest(targetServer).fireAndForget();
+    }
+
+    private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
+        return lobbies.stream()
+                .min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+                .orElse(null);
+    }
+
+    // Helper: Fallback to the highest available lobby version when an exact match is missing.
+    private List<RegisteredServer> getFallbackLobbies(String playerVersion) {
+        return versionLobbies.entrySet().stream()
+                .filter(entry -> compareVersions(entry.getKey(), playerVersion) <= 0)
+                .max((a, b) -> compareVersions(a.getKey(), b.getKey()))
+                .map(Map.Entry::getValue)
+                .orElse(null);
+    }
+
+    // Helper: Compare version strings (e.g. "1.8" vs "1.21.1")
+    private int compareVersions(String v1, String v2) {
+        String[] parts1 = v1.split("\\.");
+        String[] parts2 = v2.split("\\.");
+        int len = Math.max(parts1.length, parts2.length);
+        for (int i = 0; i < len; i++) {
+            int num1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+            int num2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+            if (num1 != num2) {
+                return num1 - num2;
+            }
+        }
+        return 0;
     }
 }

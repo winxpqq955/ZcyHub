@@ -22,6 +22,12 @@ import org.yaml.snakeyaml.Yaml;
 import net.kyori.adventure.text.Component;
 
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Comparator;
 
 @Plugin(
 	id = "vlobbyconnect",
@@ -37,130 +43,160 @@ public final class VelocityPlugin {
 	@Inject
 	private com.velocitypowered.api.proxy.ProxyServer server;
 
-	private RegisteredServer lobby1;
-	private RegisteredServer lobby2;
-	private RegisteredServer lobby3;
-	private RegisteredServer lobby4;
-
+	private final Map<String, List<RegisteredServer>> versionLobbies = new HashMap<>();
 	private final Map<UUID, Integer> connectionAttempts = new ConcurrentHashMap<>();
 
 	@Subscribe
-public void onProxyInitialize(ProxyInitializeEvent event) {
-    try {
-        // Load the config.yml file
-        Yaml yaml = new Yaml();
-        File configFile = new File("plugins/vLobbyConnect/config.yml");
-        if (!configFile.exists()) {
-            configFile.getParentFile().mkdirs();
-            Files.copy(getClass().getResourceAsStream("/config.yml"), configFile.toPath());
-        }
+	public void onProxyInitialize(ProxyInitializeEvent event) {
+		try {
+			// Load the config.yml file
+			Yaml yaml = new Yaml();
+			File configFile = new File("plugins/vLobbyConnect/config.yml");
+			if (!configFile.exists()) {
+				configFile.getParentFile().mkdirs();
+				Files.copy(getClass().getResourceAsStream("/config.yml"), configFile.toPath());
+			}
 
-        // Parse the config.yml file
-        Map<String, Object> config = yaml.load(Files.newInputStream(configFile.toPath()));
-        Map<String, String> lobbies = (Map<String, String>) config.get("lobbies");
-        if (lobbies == null) {
-            logger.error("Failed to load lobby settings.");
-            return;
-        }
+			// Parse the config.yml file
+			Map<String, Object> config = yaml.load(Files.newInputStream(configFile.toPath()));
+			Map<String, String> lobbies = (Map<String, String>) config.get("lobbies");
+			if (lobbies == null) {
+				logger.error("Failed to load lobby settings.");
+				return;
+			}
 
-        // Retrieve the registered servers
-        String lobby1Name = lobbies.get("1.20lobby1");
-        String lobby2Name = lobbies.get("1.20lobby2");
-        String lobby3Name = lobbies.get("1.8lobby1");
-        String lobby4Name = lobbies.get("1.8lobby2");
+			// Validate and log the configuration
+			Pattern pattern = Pattern.compile("^(\\d+\\.\\d+)lobby(\\d+)$");
+			for (Map.Entry<String, String> entry : lobbies.entrySet()) {
+				Matcher matcher = pattern.matcher(entry.getKey());
+				if (matcher.matches()) {
+					String version = matcher.group(1);
+					String lobbyName = entry.getValue();
+					Optional<RegisteredServer> serverOpt = server.getServer(lobbyName);
+					if (serverOpt.isPresent()) {
+						versionLobbies.computeIfAbsent(version, k -> new ArrayList<>()).add(serverOpt.get());
+						// Updated logging: Removed protocol version from the log
+						logger.info("Config Lobbies, [VERSION] {} Lobby number: {} IP: {}", version, matcher.group(2), serverOpt.get().getServerInfo().getAddress());
+					} else {
+						logger.warn("Lobby server '{}' not found in Velocity configuration.", lobbyName);
+					}
+				} else {
+					logger.warn("Invalid lobby configuration key: {}", entry.getKey());
+				}
+			}
 
-        lobby1 = server.getServer(lobby1Name).orElse(null);
-        lobby2 = server.getServer(lobby2Name).orElse(null);
-        lobby3 = server.getServer(lobby3Name).orElse(null);
-        lobby4 = server.getServer(lobby4Name).orElse(null);
+			// Check if all lobbies were retrieved successfully
+			if (versionLobbies.isEmpty()) {
+				logger.error("No valid lobbies were found. Ensure they are defined in velocity.toml.");
+			} else {
+				logger.info("vLobbyConnect initialized successfully.");
+			}
+		} catch (IOException e) {
+			logger.error("Failed to load config.yml", e);
+		}
 
-        // Check if all lobbies were retrieved successfully
-        if (lobby1 == null || lobby2 == null || lobby3 == null || lobby4 == null) {
-            logger.error("One or more lobbies were not found. Ensure they are defined in velocity.toml.");
-        } else {
-            logger.info("vLobbyConnect initialized successfully.");
-        }
-    } catch (IOException e) {
-        logger.error("Failed to load config.yml", e);
-    }
-
-    // Register commands
-    server.getCommandManager().register("hub", new HubCommand(server, logger));
-    server.getCommandManager().register("lobby", new LobbyCommand(server, logger));
-}
+		// Register commands
+		server.getCommandManager().register("hub", new HubCommand(server, logger));
+		server.getCommandManager().register("lobby", new LobbyCommand(server, logger));
+	}
 
 	@Subscribe(order = PostOrder.FIRST)
-    void onPlayerJoin(final PlayerChooseInitialServerEvent event) {
-        Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-        int attempts = connectionAttempts.getOrDefault(uuid, 0) + 1;
-        connectionAttempts.put(uuid, attempts);
+	void onPlayerJoin(final PlayerChooseInitialServerEvent event) {
+		Player player = event.getPlayer();
+		UUID uuid = player.getUniqueId();
+		int attempts = connectionAttempts.getOrDefault(uuid, 0) + 1;
+		connectionAttempts.put(uuid, attempts);
 
-        int protocolVersion = player.getProtocolVersion().getProtocol();
-        if (protocolVersion <= 47) {
-            // 1.8 users → lobby3 or lobby4
-            if (lobby3 != null && lobby3.getPlayersConnected().size() < 500) {
-                event.setInitialServer(lobby3);
-            } else if (lobby4 != null && lobby4.getPlayersConnected().size() < 500) {
-                event.setInitialServer(lobby4);
-            } else {
-                logger.warn("All 1.8 lobbies are full for player {}", player.getUsername());
-                player.sendMessage(Component.text("All 1.8 lobbies are full, please try again later."));
-                player.disconnect(Component.text("All lobbies are full."));
-            }
-        } else {
-            // 1.20+ users → lobby1 or lobby2
-            if (lobby1 != null && lobby1.getPlayersConnected().size() < 500) {
-                event.setInitialServer(lobby1);
-            } else if (lobby2 != null && lobby2.getPlayersConnected().size() < 500) {
-                event.setInitialServer(lobby2);
-            } else {
-                logger.warn("All 1.20+ lobbies are full for player {}", player.getUsername());
-                player.sendMessage(Component.text("All 1.20+ lobbies are full, please try again later."));
-                player.disconnect(Component.text("All lobbies are full."));
-            }
-        }
-    }
+		String version = player.getProtocolVersion().getName();
+		List<RegisteredServer> lobbies = versionLobbies.get(version);
+		// Fallback if no exact match exists:
+		if (lobbies == null || lobbies.isEmpty()) {
+			lobbies = getFallbackLobbies(version);
+		}
+		
+		if (lobbies == null || lobbies.isEmpty()) {
+			player.sendMessage(Component.text("No lobbies available for your Minecraft version."));
+			logger.warn("No lobbies available for version {}", version);
+			return;
+		}
 
-    @Subscribe
-    public void onServerKick(com.velocitypowered.api.event.player.KickedFromServerEvent event) {
-        Player player = event.getPlayer();
-        RegisteredServer kickedServer = event.getServer();
-        String serverName = kickedServer.getServerInfo().getName();
-        
-        // If the kicked server is already a lobby, do nothing.
-        if ((lobby1 != null && serverName.equals(lobby1.getServerInfo().getName())) ||
-            (lobby2 != null && serverName.equals(lobby2.getServerInfo().getName())) ||
-            (lobby3 != null && serverName.equals(lobby3.getServerInfo().getName())) ||
-            (lobby4 != null && serverName.equals(lobby4.getServerInfo().getName()))) {
-            return;
-        }
-        
-        RegisteredServer fallback = null;
-        int protocolVersion = player.getProtocolVersion().getProtocol();
-        if (protocolVersion <= 47) {
-            if (lobby3 != null && lobby3.getPlayersConnected().size() < 500) {
-                fallback = lobby3;
-            } else if (lobby4 != null && lobby4.getPlayersConnected().size() < 500) {
-                fallback = lobby4;
-            }
-        } else {
-            if (lobby1 != null && lobby1.getPlayersConnected().size() < 500) {
-                fallback = lobby1;
-            } else if (lobby2 != null && lobby2.getPlayersConnected().size() < 500) {
-                fallback = lobby2;
-            }
-        }
-        
-        if (fallback != null) {
-            event.setResult(com.velocitypowered.api.event.player.KickedFromServerEvent.RedirectPlayer.create(fallback));
-        }
-    }
+		RegisteredServer targetServer = getLeastLoadedLobby(lobbies);
 
-    @Subscribe
-    public void onPlayerDisconnect(Player player) {
-        UUID uuid = player.getUniqueId();
-        connectionAttempts.remove(uuid);
-        logger.info("Player {} disconnected.", player.getUsername());
-    }
+		if (targetServer == null) {
+			player.sendMessage(Component.text("All lobbies are full, please try again later."));
+			logger.warn("All lobbies are full for version {}", version);
+			return;
+		}
+
+		if (player.getCurrentServer().isPresent() &&
+			player.getCurrentServer().get().getServerInfo().getName().equals(targetServer.getServerInfo().getName())) {
+			player.sendMessage(Component.text("You are already in a lobby."));
+			return;
+		}
+
+		logger.info("Player {} connecting to lobby '{}'", player.getUsername(), targetServer.getServerInfo().getName());
+		// Instead of a connection request, set the initial server directly:
+		event.setInitialServer(targetServer);
+	}
+
+	private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
+		return lobbies.stream()
+				.min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+				.orElse(null);
+	}
+
+	// Helper: Fallback to the highest available lobby version when an exact match is missing.
+	private List<RegisteredServer> getFallbackLobbies(String playerVersion) {
+		return versionLobbies.entrySet().stream()
+				.filter(entry -> compareVersions(entry.getKey(), playerVersion) <= 0)
+				.max((a, b) -> compareVersions(a.getKey(), b.getKey()))
+				.map(Map.Entry::getValue)
+				.orElse(null);
+	}
+
+	// Helper: Compare version strings (e.g. "1.8" vs "1.21.1")
+	private int compareVersions(String v1, String v2) {
+		String[] parts1 = v1.split("\\.");
+		String[] parts2 = v2.split("\\.");
+		int len = Math.max(parts1.length, parts2.length);
+		for (int i = 0; i < len; i++) {
+			int num1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+			int num2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+			if (num1 != num2) {
+				return num1 - num2;
+			}
+		}
+		return 0;
+	}
+
+	@Subscribe
+	public void onServerKick(com.velocitypowered.api.event.player.KickedFromServerEvent event) {
+		Player player = event.getPlayer();
+		RegisteredServer kickedServer = event.getServer();
+		String serverName = kickedServer.getServerInfo().getName();
+
+		// If the kicked server is already a lobby, do nothing.
+		if (versionLobbies.values().stream().flatMap(List::stream).anyMatch(server -> server.getServerInfo().getName().equals(serverName))) {
+			return;
+		}
+
+		RegisteredServer fallback = null;
+		String version = player.getProtocolVersion().getName();
+		List<RegisteredServer> lobbies = versionLobbies.get(version);
+
+		if (lobbies != null && !lobbies.isEmpty()) {
+			fallback = getLeastLoadedLobby(lobbies);
+		}
+
+		if (fallback != null) {
+			event.setResult(com.velocitypowered.api.event.player.KickedFromServerEvent.RedirectPlayer.create(fallback));
+		}
+	}
+
+	@Subscribe
+	public void onPlayerDisconnect(Player player) {
+		UUID uuid = player.getUniqueId();
+		connectionAttempts.remove(uuid);
+		logger.info("Player {} disconnected.", player.getUsername());
+	}
 }

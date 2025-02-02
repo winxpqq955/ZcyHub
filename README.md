@@ -6,8 +6,7 @@ vLobbyConnect is a Velocity plugin that manages lobby connections for different 
 ## Setup
 
 1. Place the plugin jar in your Velocity plugins folder.
-2. Ensure your backend servers have `online-mode=false`.
-3. Configure your lobbies in two places:
+2. Configure your lobbies in two places:
 
 ### Plugin Config (config.yml)
 This file is located in `src/main/resources/config.yml` (it will be copied to `plugins/vLobbyConnect/config.yml` on first run):
@@ -18,6 +17,10 @@ lobbies:
   1.20lobby2: "name2"
   1.8lobby1: "name3"
   1.8lobby2: "name4"
+
+# To add more lobbies, follow the pattern "VERSIONlobbyX"
+# Example:
+# 1.13lobby8: "name5"
 ```
 
 ### Velocity Server Configuration (velocity.toml)
@@ -36,6 +39,12 @@ try = []             # Fallback is empty
 
 - **/lobby**: Connects the player to the correct lobby based on their protocol version.
 - **/hub**: Transfers the player back to the designated hub/lobby.
+
+## Load Balancing Strategies
+
+The plugin uses the following load balancing strategies to ensure fair distribution of players across available lobbies while considering the current load on each lobby:
+
+- **Fallback Mechanism:** If the configured lobbies are not available or misconfigured, the plugin implements a fallback mechanism to handle such cases. This can involve redirecting players to a default lobby or displaying a message indicating that the lobbies are currently unavailable.
 
 Logs will provide further details if lobbies are full or misconfigured.
 

@@ -3,3 +3,7 @@ lobbies:
   1.20lobby2: "lobby2"
   1.8lobby1: "lobby3"
   1.8lobby2: "lobby4"
+
+# To add more lobbies, follow the pattern "VERSIONlobbyX"
+# Example:
+# 1.13lobby8: "lobby5"
