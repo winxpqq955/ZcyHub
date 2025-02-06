@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class HubCommand implements SimpleCommand {
 
@@ -109,9 +111,27 @@ public class HubCommand implements SimpleCommand {
     }
 
     private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
-        return lobbies.stream()
-                .min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
-                .orElse(null);
+        List<RegisteredServer> onlineLobbies = lobbies.stream()
+            .filter(this::isServerOnline)
+            .collect(Collectors.toList());
+        
+        if (onlineLobbies.isEmpty()) {
+            return null;
+        }
+
+        return onlineLobbies.stream()
+            .min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+            .orElse(null);
+    }
+
+    private boolean isServerOnline(RegisteredServer server) {
+        try {
+            server.ping().get(2, TimeUnit.SECONDS);
+            return true;
+        } catch (Exception e) {
+            logger.warn("Lobby '{}' appears to be offline", server.getServerInfo().getName());
+            return false;
+        }
     }
 
     // Helper: Fallback to the highest available lobby version when an exact match is missing.

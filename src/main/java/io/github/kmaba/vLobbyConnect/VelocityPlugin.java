@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Comparator;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Plugin(
 	id = "vlobbyconnect",
@@ -130,8 +132,16 @@ public final class VelocityPlugin {
 		RegisteredServer targetServer = getLeastLoadedLobby(lobbies);
 
 		if (targetServer == null) {
-			player.sendMessage(Component.text("All lobbies are full, please try again later."));
-			logger.warn("All lobbies are full for version {}", version);
+			// Try fallback lobbies if all version-specific lobbies are offline
+			List<RegisteredServer> fallbackLobbies = getFallbackLobbies(version);
+			if (fallbackLobbies != null && !fallbackLobbies.isEmpty()) {
+				targetServer = getLeastLoadedLobby(fallbackLobbies);
+			}
+		}
+
+		if (targetServer == null) {
+			player.sendMessage(Component.text("All lobbies are currently unavailable, please try again later."));
+			logger.warn("All lobbies are offline for version {}", version);
 			return;
 		}
 
@@ -147,9 +157,18 @@ public final class VelocityPlugin {
 	}
 
 	private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
-		return lobbies.stream()
-				.min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
-				.orElse(null);
+		// Filter only online lobbies
+		List<RegisteredServer> onlineLobbies = lobbies.stream()
+			.filter(this::isServerOnline)
+			.collect(Collectors.toList());
+		
+		if (onlineLobbies.isEmpty()) {
+			return null;
+		}
+
+		return onlineLobbies.stream()
+			.min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+			.orElse(null);
 	}
 
 	// Helper: Fallback to the highest available lobby version when an exact match is missing.
@@ -174,6 +193,18 @@ public final class VelocityPlugin {
 			}
 		}
 		return 0;
+	}
+
+	// Add this new helper method
+	private boolean isServerOnline(RegisteredServer server) {
+		try {
+			// Try to ping the server with a short timeout
+			server.ping().get(2, TimeUnit.SECONDS);
+			return true;
+		} catch (Exception e) {
+			logger.warn("Lobby '{}' appears to be offline", server.getServerInfo().getName());
+			return false;
+		}
 	}
 
 	@Subscribe
