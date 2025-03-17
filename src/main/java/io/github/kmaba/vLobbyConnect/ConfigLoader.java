@@ -22,7 +22,7 @@ public enum ConfigLoader {
             // Load the config.yml file
             Yaml yaml = new Yaml();
             final var base = directory.toString();
-            File configFile = new File(base + "config.yml");
+            File configFile = new File(base + "/config.yml");
             if (!configFile.exists()) {
                 configFile.getParentFile().mkdirs();
                 Files.copy(getClass().getResourceAsStream("/config.yml"), configFile.toPath());

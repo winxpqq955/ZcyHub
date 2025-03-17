@@ -28,12 +28,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Plugin(
-	id = "vlobbyconnect",
-	name = "vLobbyConnect",
-	url = "https://kmaba.link/",
+	id = "zcyhub",
+	name = "ZcyHub",
 	description = "A Velocity Plugin for Lobby Connection",
 	version = "1.0",
-	authors = { "kmaba" }
+	authors = { "ZhangChengyu" }
 )
 public final class VelocityPlugin {
 	public static VelocityPlugin INSTANCE;
