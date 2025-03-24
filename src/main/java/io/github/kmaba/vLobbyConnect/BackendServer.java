@@ -13,10 +13,8 @@ import java.nio.charset.StandardCharsets;
 public enum BackendServer {
     INSTANCE;
     private static final MinecraftChannelIdentifier IDENTIFIER = MinecraftChannelIdentifier.from("zcyhub:v1");
-    private static final MinecraftChannelIdentifier BUNGEE_MODERN_CHANNEL = MinecraftChannelIdentifier.from("bungeecord:main");
     public void init() {
         VelocityPlugin.INSTANCE.getServer().getChannelRegistrar().register(IDENTIFIER);
-        VelocityPlugin.INSTANCE.getServer().getChannelRegistrar().register(BUNGEE_MODERN_CHANNEL);
     }
 
     @Subscribe(priority = 100)
@@ -29,19 +27,14 @@ public enum BackendServer {
 
     @Subscribe()
     public void onPluginMessageFromBackend(PluginMessageEvent event) {
-        if (!IDENTIFIER.equals(event.getIdentifier())) {
-            return;
-        }
-        event.setResult(PluginMessageEvent.ForwardResult.handled());
-        if (!(event.getSource() instanceof ServerConnection)) {
-            return;
-        }
-
+        if (!(event.getSource() instanceof ServerConnection)) return;
+        if (!event.getIdentifier().getId().equals(IDENTIFIER.getId())) return;
         final var p = new String(event.getData(), StandardCharsets.UTF_8).split(",", 2);
         final var maybePlayer = VelocityPlugin.INSTANCE.getServer().getPlayer(p[0]);
         if (maybePlayer.isPresent()) {
             final var player = maybePlayer.get();
             Send2Any.INSTANCE.send2Any(player, p[1]);
         }
+        event.setResult(PluginMessageEvent.ForwardResult.handled());
     }
 }
