@@ -12,6 +12,8 @@ repositories {
 
 dependencies {
     compileOnly(libs.velocity)
+    compileOnly(files("libs/velocity-api-3.4.0-SNAPSHOT.jar"))
+    annotationProcessor(files("libs/velocity-api-3.4.0-SNAPSHOT.jar"))
     annotationProcessor(libs.velocity)
 }
 

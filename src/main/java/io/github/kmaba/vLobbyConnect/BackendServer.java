@@ -2,20 +2,32 @@ package io.github.kmaba.vLobbyConnect;
 
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
+import com.velocitypowered.api.event.other.BungeeCordConnectEvent;
+import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
 
 import java.nio.charset.StandardCharsets;
 
 public enum BackendServer {
     INSTANCE;
     private static final MinecraftChannelIdentifier IDENTIFIER = MinecraftChannelIdentifier.from("zcyhub:v1");
-
+    private static final MinecraftChannelIdentifier BUNGEE_MODERN_CHANNEL = MinecraftChannelIdentifier.from("bungeecord:main");
     public void init() {
         VelocityPlugin.INSTANCE.getServer().getChannelRegistrar().register(IDENTIFIER);
+        VelocityPlugin.INSTANCE.getServer().getChannelRegistrar().register(BUNGEE_MODERN_CHANNEL);
     }
 
-    @Subscribe
+    @Subscribe(priority = 100)
+    public void onPluginMessage(BungeeCordConnectEvent event) {
+        if (!event.getServerName().startsWith("zcy://")) return;
+        final var targetGroup = event.getServerName().substring(6);
+        Send2Any.INSTANCE.send2Any(event.getPlayer(), targetGroup);
+        event.setCancelled(true);
+    }
+
+    @Subscribe()
     public void onPluginMessageFromBackend(PluginMessageEvent event) {
         if (!IDENTIFIER.equals(event.getIdentifier())) {
             return;
@@ -32,7 +44,4 @@ public enum BackendServer {
             Send2Any.INSTANCE.send2Any(player, p[1]);
         }
     }
-
-
-
 }
