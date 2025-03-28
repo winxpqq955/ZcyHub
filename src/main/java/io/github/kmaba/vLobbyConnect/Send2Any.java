@@ -18,7 +18,7 @@ public enum Send2Any {
         List<RegisteredServer> lobbies = VelocityPlugin.INSTANCE.getLobbies().get(targetHub);
 
         if (lobbies == null || lobbies.isEmpty()) {
-            player.sendMessage(Component.text("No lobbies available."));
+            player.sendMessage(Component.text("没有大厅 [SendAny-1]"));
             logger.warn("No lobbies available");
             return;
         }
@@ -26,7 +26,7 @@ public enum Send2Any {
         RegisteredServer targetServer = getLeastLoadedLobby(lobbies);
 
         if (targetServer == null) {
-            player.sendMessage(Component.text("All lobbies are full, please try again later."));
+            player.sendMessage(Component.text("大厅已满 [SendAny-2]"));
             logger.warn("All lobbies are full");
             return;
         }
@@ -51,16 +51,9 @@ public enum Send2Any {
     }
 
     private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
-        List<RegisteredServer> onlineLobbies = lobbies.stream()
+        return lobbies.stream()
                 .filter(this::isServerOnline)
-                .toList();
-
-        if (onlineLobbies.isEmpty()) {
-            return null;
-        }
-
-        return onlineLobbies.stream()
-                .min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+                .max(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
                 .orElse(null);
     }
 

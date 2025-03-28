@@ -68,33 +68,14 @@ public final class VelocityPlugin {
 		UUID uuid = player.getUniqueId();
 		int attempts = connectionAttempts.getOrDefault(uuid, 0) + 1;
 		connectionAttempts.put(uuid, attempts);
-
-		String version = player.getProtocolVersion().getName();
-		List<RegisteredServer> lobbies = this.lobbies.get(version);
-		// Fallback if no exact match exists:
-		if (lobbies == null || lobbies.isEmpty()) {
-			lobbies = getFallbackLobbies(version);
-		}
-		
-		if (lobbies == null || lobbies.isEmpty()) {
-			player.sendMessage(Component.text("No lobbies available for your Minecraft version."));
-			logger.warn("No lobbies available for version {}", version);
-			return;
-		}
-
-		RegisteredServer targetServer = getLeastLoadedLobby(lobbies);
+		RegisteredServer targetServer = getLeastLoadedLobby(this.getServer().getAllServers().stream().toList());
 
 		if (targetServer == null) {
-			// Try fallback lobbies if all version-specific lobbies are offline
-			List<RegisteredServer> fallbackLobbies = getFallbackLobbies(version);
-			if (fallbackLobbies != null && !fallbackLobbies.isEmpty()) {
-				targetServer = getLeastLoadedLobby(fallbackLobbies);
-			}
 		}
 
 		if (targetServer == null) {
 			player.sendMessage(Component.text("All lobbies are currently unavailable, please try again later."));
-			logger.warn("All lobbies are offline for version {}", version);
+			logger.warn("All lobbies are offline");
 			return;
 		}
 
@@ -110,26 +91,10 @@ public final class VelocityPlugin {
 	}
 
 	private RegisteredServer getLeastLoadedLobby(List<RegisteredServer> lobbies) {
-		// Filter only online lobbies
-		List<RegisteredServer> onlineLobbies = lobbies.stream()
-			.filter(this::isServerOnline)
-			.toList();
-		
-		if (onlineLobbies.isEmpty()) {
-			return null;
-		}
-
-		return onlineLobbies.stream()
-			.min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
-			.orElse(null);
-	}
-
-	// Helper: Fallback to the highest available lobby version when an exact match is missing.
-	private List<RegisteredServer> getFallbackLobbies(String playerVersion) {
-		return lobbies.values().stream()
-			.flatMap(List::stream)
-			.filter(this::isServerOnline)
-			.collect(Collectors.toList());
+		return lobbies.stream()
+				.filter(this::isServerOnline)
+				.max(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
+				.orElse(null);
 	}
 
 	// Add this new helper method
@@ -155,13 +120,7 @@ public final class VelocityPlugin {
 			return;
 		}
 
-		RegisteredServer fallback = null;
-		String version = player.getProtocolVersion().getName();
-		List<RegisteredServer> lobbies = this.lobbies.get(version);
-
-		if (lobbies != null && !lobbies.isEmpty()) {
-			fallback = getLeastLoadedLobby(lobbies);
-		}
+		RegisteredServer fallback = getLeastLoadedLobby(this.getServer().getAllServers().stream().toList());
 
 		if (fallback != null) {
 			event.setResult(KickedFromServerEvent.RedirectPlayer.create(fallback));
