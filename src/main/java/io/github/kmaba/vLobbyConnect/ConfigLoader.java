@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 
 public enum ConfigLoader {
     INSTANCE;
-    private final Logger logger = LoggerFactory.getLogger("VLobbyConnect-ConfigLoader");
+    private final Logger logger = LoggerFactory.getLogger("ZcyHub-Config");
 
     public void load(Path directory) {
         try {

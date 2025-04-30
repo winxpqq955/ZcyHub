@@ -31,10 +31,7 @@ public enum BackendServer {
         if (!event.getIdentifier().getId().equals(IDENTIFIER.getId())) return;
         final var p = new String(event.getData(), StandardCharsets.UTF_8).split(",", 2);
         final var maybePlayer = VelocityPlugin.INSTANCE.getServer().getPlayer(p[0]);
-        if (maybePlayer.isPresent()) {
-            final var player = maybePlayer.get();
-            Send2Any.INSTANCE.send2Any(player, p[1]);
-        }
+        maybePlayer.ifPresent(player -> Send2Any.INSTANCE.send2Any(player, p[1]));
         event.setResult(PluginMessageEvent.ForwardResult.handled());
     }
 }
