@@ -13,6 +13,9 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -71,9 +74,6 @@ public final class VelocityPlugin {
 		RegisteredServer targetServer = getLeastLoadedLobby(this.getServer().getAllServers().stream().toList());
 
 		if (targetServer == null) {
-		}
-
-		if (targetServer == null) {
 			player.sendMessage(Component.text("All lobbies are currently unavailable, please try again later."));
 			logger.warn("All lobbies are offline");
 			return;
@@ -111,19 +111,12 @@ public final class VelocityPlugin {
 
 	@Subscribe
 	public void onServerKick(KickedFromServerEvent event) {
-		Player player = event.getPlayer();
-		RegisteredServer kickedServer = event.getServer();
-		String serverName = kickedServer.getServerInfo().getName();
-
-		// If the kicked server is already a lobby, do nothing.
-		if (lobbies.values().stream().flatMap(List::stream).anyMatch(server -> server.getServerInfo().getName().equals(serverName))) {
-			return;
-		}
-
-		RegisteredServer fallback = getLeastLoadedLobby(this.getServer().getAllServers().stream().toList());
-
+		logger.info("fallback: {}", ConfigLoader.INSTANCE.getFallbackGroup());
+		RegisteredServer fallback = getLeastLoadedLobby(this.getLobbies().get(ConfigLoader.INSTANCE.getFallbackGroup()));
 		if (fallback != null) {
-			event.setResult(KickedFromServerEvent.RedirectPlayer.create(fallback));
+			event.getServerKickReason().ifPresent(component -> {
+				event.setResult(KickedFromServerEvent.RedirectPlayer.create(fallback, component.style(Style.style(TextDecoration.BOLD)).color(TextColor.color(255, 0, 0))));
+			});
 		}
 	}
 

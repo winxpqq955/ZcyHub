@@ -47,7 +47,32 @@ public class HubCommand implements SimpleCommand {
             return;
         }
         Player player = (Player) source;
+
         String targetHub = "main";
+
+        if (player.getCurrentServer().isPresent()) {
+            String currentServerName = player.getCurrentServer().get().getServerInfo().getName();
+            logger.info("Player {} is in server {}", player.getUsername(), currentServerName);
+
+            // 查找玩家当前所在的服务器属于哪个组
+            String currentGroup = null;
+            for (Map.Entry<String, List<RegisteredServer>> entry : versionLobbies.entrySet()) {
+                for (RegisteredServer server : entry.getValue()) {
+                    if (server.getServerInfo().getName().equals(currentServerName)) {
+                        currentGroup = entry.getKey();
+                        break;
+                    }
+                }
+                if (currentGroup != null) break;
+            }
+
+            // 如果找到了服务器所在的组，并且是子组（包含点号）
+            if (currentGroup != null && currentGroup.contains(".")) {
+                // 获取主组名（点号前的部分）
+                targetHub = currentGroup.substring(0, currentGroup.indexOf("."));
+                logger.info("Player is in sub-group {}, redirecting to main group {}", currentGroup, targetHub);
+            }
+        }
         if (arguments.length != 0) {
             targetHub = arguments[0];
         }

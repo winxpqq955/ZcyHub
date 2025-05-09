@@ -1,7 +1,21 @@
 lobbies:
   main:
-    - "main_lobby_1"
-    - "main_lobby_2"
+    # main项是必须的
+    main:
+      - "main_lobby_1": "127.0.0.1:25565"
+      - "main_lobby_2": "127.0.0.1:30000"
   skywars:
-    - "skywars_lobby_1"
-    - "skywars_lobby_2"
+    main:
+      - "skywars_lobby_1": "127.0.0.1:31000"
+      - "skywars_lobby_2": "127.0.0.1:43435"
+    # sub项是可选的
+    sub:
+      game_4_team:
+        # 使用自定ip
+        - "sw_game_room_1" : "127.0.0.1:50000"
+      game_2_team:
+        # 使用velocity配置内的服务器
+        - "sw_game_room_2"
+      game_solo:
+        - "sw_game_room_3"
+fallback_group: main
