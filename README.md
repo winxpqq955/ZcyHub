@@ -1,5 +1,6 @@
 # ZcyHub
 
+注意: 你不能在Paper Velocity中运行它, 它是基于一个修改过的Velocity fork开发的
 ## Setup
 
 1. Place the plugin jar in your Velocity plugins folder.
